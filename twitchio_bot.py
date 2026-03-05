@@ -21,6 +21,9 @@ import twitchio
 from twitchio import eventsub
 from twitchio.ext import commands
 
+import donation_helper as dono
+import gspread_functions as sheet
+
 
 if TYPE_CHECKING:
     import sqlite3
@@ -76,7 +79,10 @@ class Bot(commands.AutoBot):
         subs: list[eventsub.SubscriptionPayload] = [
             eventsub.ChatMessageSubscription(broadcaster_user_id=payload.user_id, user_id=self.bot_id),
             eventsub.ChannelPollBeginSubscription(broadcaster_user_id=payload.user_id),
+            eventsub.ChannelBitsUseSubscription(broadcaster_user_id=payload.user_id),
             eventsub.ChannelSubscribeSubscription(broadcaster_user_id=payload.user_id),
+            eventsub.ChannelSubscriptionGiftSubscription(broadcaster_user_id=payload.user_id),
+            eventsub.ChannelSubscribeMessageSubscription(broadcaster_user_id=payload.user_id),
         ]
 
         resp: twitchio.MultiSubscribePayload = await self.multi_subscribe(subs)
@@ -118,11 +124,85 @@ class EventSubTestComponent(commands.Component):
     # Example listener for an EventSub command
     @commands.Component.listener()
     async def event_poll_begin(self, payload: twitchio.ChannelPollBegin) -> None:
-        print(f"POLL STARTED")
+        print(f"----- POLL STARTED -----")
 
+        # Send to spreadsheet (for testing)
+        sheet.donationToRow("donator", 4.99, "Test Type", "message hair longer {blue}")
+
+    # Event listener for bit donations
+    @commands.Component.listener()
+    async def event_bit_use(self, payload: twitchio.ChannelBitsUse) -> None:
+        # Debug prints
+        print(f"----- BIT DONATION -----")
+        msg = f"thank you {payload.user.name} for the {payload.bits} bits, used for {payload.type}!! (timestamp: {payload.timestamp}, fragments: {payload.fragments}, power-up: {payload.power_up}, text: '{payload.text}',)"
+        print(msg)
+        print(f"----- BIT DONATION -----")
+
+        # Build spreadsheet row info
+        donator = payload.user.name
+        amount = dono.findBitAmount(payload.bits)
+        type = "Bits"
+        message = payload.text
+
+        # Send to spreadsheet, only if total amount is $1.00 or more
+        if amount >= 1.00:
+            sheet.donationToRow(donator, amount, type, message)
+
+    # Event listener for standard channel subscriptions
     @commands.Component.listener()
     async def event_subscription(self, payload: twitchio.ChannelSubscribe) -> None:
-        print(f"STANDARD SUBSCRIPTION")
+        # Debug prints
+        print(f"----- STANDARD SUBSCRIPTION -----")
+        msg = f"thank you {payload.user.name} for the tier {payload.tier} sub!! (timestamp: {payload.timestamp}, gift: {payload.gift})"
+        print(msg)
+        print(f"----- STANDARD SUBSCRIPTION -----")
+
+        # Build spreadsheet row info
+        donator = payload.user.name
+        amount = dono.findSubAmount(payload.tier)
+        type = f"Tier {payload.tier} Sub"
+        message = ""
+
+        # Send to spreadsheet, only if not given from a gift sub TODO
+        # if not payload.gift:
+        sheet.donationToRow(donator, amount, type, message)
+
+    # Event listener for gifted channel subscriptions
+    @commands.Component.listener()
+    async def event_subscription_gift(self, payload: twitchio.ChannelSubscriptionGift) -> None:
+        # Debug prints
+        print(f"----- GIFT SUBSCRIPTION -----")
+        msg = f"thank you {payload.user.name} for the {payload.total} tier {payload.tier} sub(s)!! (timestamp: {payload.timestamp}, anonymous: {payload.anonymous}, total: {payload.cumulative_total})"
+        print(msg)
+        print(f"----- GIFT SUBSCRIPTION -----")
+
+        # Build spreadsheet row info
+        donator = payload.user.name
+        amount = dono.findSubAmount(payload.tier) * payload.total
+        type = f"{payload.total} Tier {payload.tier} Gift Sub(s)"
+        message = ""
+
+        # Send to spreadsheet
+        sheet.donationToRow(donator, amount, type, message)
+
+
+    # Event listener for renewed channel subscriptions
+    @commands.Component.listener()
+    async def event_subscription_message(self, payload: twitchio.ChannelSubscriptionMessage) -> None:
+        # Debug prints
+        print(f"----- RENEW SUBSCRIPTION -----")
+        msg = f"thank you {payload.user.name} for the {payload.months} month tier {payload.tier} sub!! (timestamp: {payload.timestamp}, cumulative months: {payload.cumulative_months}, streak: {payload.streak_months}, text: '{payload.text}', emotes: {payload.emotes})"
+        print(msg)
+        print(f"----- RENEW SUBSCRIPTION -----")
+
+        # Build spreadsheet row info
+        donator = payload.user.name
+        amount = dono.findSubAmount(payload.tier)
+        type = f"Tier {payload.tier} Renew Sub"
+        message = payload.text
+
+        # Send to spreadsheet
+        sheet.donationToRow(donator, amount, type, message)
 
 
 """
@@ -134,7 +214,7 @@ class CommandTestComponent(commands.Component):
     # Example listener for reading in chat messages
     @commands.Component.listener()
     async def event_message(self, payload: twitchio.ChatMessage) -> None:
-        print(f"[{payload.broadcaster.name}] - {payload.chatter.name}: {payload.text}")
+        print(f"[{payload.broadcaster.name}] - ({payload.timestamp}) {payload.chatter.name}: {payload.text}")
 
     @commands.command()
     async def hi(self, ctx: commands.Context) -> None:
@@ -234,7 +314,10 @@ async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[
                 [
                     eventsub.ChatMessageSubscription(broadcaster_user_id=row["user_id"], user_id=BOT_ID),
                     eventsub.ChannelPollBeginSubscription(broadcaster_user_id=row["user_id"]),
+                    eventsub.ChannelBitsUseSubscription(broadcaster_user_id=row["user_id"]),
                     eventsub.ChannelSubscribeSubscription(broadcaster_user_id=row["user_id"]),
+                    eventsub.ChannelSubscriptionGiftSubscription(broadcaster_user_id=row["user_id"]),
+                    eventsub.ChannelSubscribeMessageSubscription(broadcaster_user_id=row["user_id"]),
                 ]
             )
 
