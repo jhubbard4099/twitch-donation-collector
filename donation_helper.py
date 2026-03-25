@@ -1,3 +1,14 @@
+
+def findSubType(tier):
+    if tier == "1000":
+        return 1
+    elif tier == "2000":
+        return 2
+    elif tier == "3000":
+        return 3
+    else:
+        return 0
+
 def findSubAmount(tier):
     if tier == "1000":
         return 6.00

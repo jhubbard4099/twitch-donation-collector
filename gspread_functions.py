@@ -23,7 +23,7 @@ SH_URL: str = getenv("GSPREAD_SH_URL")
 # Build worksheet access for service account
 gc = gspread.service_account()
 sh = gc.open_by_url(SH_URL)
-worksheet = sh.get_worksheet(0)
+worksheet = sh.get_worksheet(1) # 0 = main data, 1 = test data
 
 
 def donationToRow(donator, amount, type, message):
@@ -37,7 +37,7 @@ def main() -> None:
     print(worksheet.acell("A3").value)
     # worksheet.update_acell("A10", "TEST2")
 
-    donationToRow("donator", 5.99, "type", "message beard shorter {red}")
+    donationToRow("gspread", 5.99, "Test Donation", "gspread main() test donation")
 
 if __name__ == "__main__":
     main()

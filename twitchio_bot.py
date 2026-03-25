@@ -127,7 +127,7 @@ class EventSubTestComponent(commands.Component):
         print(f"----- POLL STARTED -----")
 
         # Send to spreadsheet (for testing)
-        sheet.donationToRow("donator", 4.99, "Test Type", "message hair longer {blue}")
+        sheet.donationToRow("TwitchIO", 4.99, "Test Donation", "TwitchIO poll start test")
 
     # Event listener for bit donations
     @commands.Component.listener()
@@ -160,12 +160,12 @@ class EventSubTestComponent(commands.Component):
         # Build spreadsheet row info
         donator = payload.user.name
         amount = dono.findSubAmount(payload.tier)
-        type = f"Tier {payload.tier} Sub"
+        type = f"Tier {dono.findSubType(payload.tier)} Sub"
         message = ""
 
-        # Send to spreadsheet, only if not given from a gift sub TODO
-        # if not payload.gift:
-        sheet.donationToRow(donator, amount, type, message)
+        # Send to spreadsheet, only if not given from a gift sub
+        if not payload.gift:
+            sheet.donationToRow(donator, amount, type, message)
 
     # Event listener for gifted channel subscriptions
     @commands.Component.listener()
@@ -179,7 +179,7 @@ class EventSubTestComponent(commands.Component):
         # Build spreadsheet row info
         donator = payload.user.name
         amount = dono.findSubAmount(payload.tier) * payload.total
-        type = f"{payload.total} Tier {payload.tier} Gift Sub(s)"
+        type = f"{payload.total} Tier {dono.findSubType(payload.tier)} Gift Sub(s)"
         message = ""
 
         # Send to spreadsheet
@@ -198,7 +198,7 @@ class EventSubTestComponent(commands.Component):
         # Build spreadsheet row info
         donator = payload.user.name
         amount = dono.findSubAmount(payload.tier)
-        type = f"Tier {payload.tier} Renew Sub"
+        type = f"Tier {dono.findSubType(payload.tier)} Renew Sub"
         message = payload.text
 
         # Send to spreadsheet
@@ -338,6 +338,11 @@ def main() -> None:
                     await bot.add_token(*pair)
 
                 await bot.start(load_tokens=False)
+
+    # test donation interface
+    print(f"----- STARTUP DONATION -----")
+    sheet.donationToRow("TwitchIO", "1.99", "Test Donation", "TwitchIO startup test")
+    print(f"----- STARTUP DONATION -----")
 
     try:
         asyncio.run(runner())
