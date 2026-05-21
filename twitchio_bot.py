@@ -216,6 +216,26 @@ class CommandTestComponent(commands.Component):
     async def event_message(self, payload: twitchio.ChatMessage) -> None:
         print(f"[{payload.broadcaster.name}] - ({payload.timestamp}) {payload.chatter.name}: {payload.text}")
 
+        # Check for donation command sent by me or the bot through Streamlabs Chatbot program
+        # Nest if checks to avoid doing the message splitting unless it could be sent from me or the bot
+        if (payload.chatter.name == "jbot37x" or payload.chatter.name == "jman37x"):
+
+            # Split message on spaces
+            messageContents = payload.text.split()
+
+            if messageContents[0] == "!donation":
+                print(f"----- TIP DONATION -----")
+
+                # Build spreadsheet row info
+                donator = messageContents[1]
+                amount = messageContents[2]
+                donationMsg = " ".join(messageContents[3:])
+
+                # Send to spreadsheet
+                sheet.donationToRow(donator, amount, "Donation", donationMsg)
+
+                print(f"----- TIP DONATION -----")
+
     @commands.command()
     async def hi(self, ctx: commands.Context) -> None:
         """
