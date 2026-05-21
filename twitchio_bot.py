@@ -224,17 +224,20 @@ class CommandTestComponent(commands.Component):
             messageContents = payload.text.split()
 
             if messageContents[0] == "!donation":
-                print(f"----- TIP DONATION -----")
 
                 # Build spreadsheet row info
                 donator = messageContents[1]
                 amount = messageContents[2]
                 donationMsg = " ".join(messageContents[3:])
 
+                # Debug prints
+                print(f"----- TIP DONATION -----")
+                msg = f"thank you {donator} for the ${amount} donation!! (message: {donationMsg})"
+                print(msg)
+                print(f"----- TIP DONATION -----")
+
                 # Send to spreadsheet
                 sheet.donationToRow(donator, amount, "Donation", donationMsg)
-
-                print(f"----- TIP DONATION -----")
 
     @commands.command()
     async def hi(self, ctx: commands.Context) -> None:
